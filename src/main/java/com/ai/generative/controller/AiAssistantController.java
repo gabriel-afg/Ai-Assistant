@@ -2,6 +2,9 @@ package com.ai.generative.controller;
 
 import com.ai.generative.dto.MessageDTO;
 import com.ai.generative.factory.AiAssistantFactory;
+import com.ai.generative.factory.ContentRetrieverFactory;
+import com.ai.generative.factory.DocumentAssistantFactory;
+import com.ai.generative.factory.EmbeddingFactory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -18,11 +21,17 @@ public class AiAssistantController {
     private String accessToken;
 
     @PostMapping
-    public ResponseEntity chat(@RequestBody MessageDTO messageDTO) {
-        ChatLanguageModel chatLanguageModel = AiAssistantFactory.createHuggingFace(accessToken);
+    public ResponseEntity<String> chat(@RequestBody MessageDTO messageDTO){
+        ChatLanguageModel chatModel = AiAssistantFactory.createLocalChatModel();
+        var embeddingModel = EmbeddingFactory.createEmbeddingModel();
+        var embeddingStore = EmbeddingFactory.createEmbeddingStore();
+        var fileContentRetriever = ContentRetrieverFactory.createFileContentRetriever(
+                embeddingModel,
+                embeddingStore,
+                "movies.txt");
 
-        String response = chatLanguageModel.generate(messageDTO.message());
-
+        var documentAssistant = new DocumentAssistantFactory(chatModel, fileContentRetriever);
+        String response = documentAssistant.chat(messageDTO.message());
         return ResponseEntity.ok().body(response);
     }
 
